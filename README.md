@@ -49,6 +49,12 @@ the real drawio editor and whatever LLM chat you're already using (ChatGPT, Clau
 - **Paste XML** — opens a dialog to paste that LLM's raw XML reply, loading it straight onto the
   canvas, fully editable in the real drawio UI.
 - **Export PNG** — exports the current diagram as a PNG.
+- **3D View** — extrudes the current diagram's nodes/edges into an interactive, orbitable 3D scene
+  (via [Three.js](https://threejs.org), loaded lazily from a CDN only when clicked). This is purely
+  a visualization layer on top of the same mxGraph XML — it doesn't change the diagram format, so
+  Copy/Paste XML and any LLM's output are unaffected.
+- **Help** (header, `?` icon) — reopens the onboarding overlay explaining the loop below; it also
+  shows automatically the first time you visit.
 
 Typical loop: brainstorm a diagram in any chat → **Copy Guideline**, paste it into that chat →
 paste its XML reply via **Paste XML** → iterate by **Copy XML**, asking that chat for a change,

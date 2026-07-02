@@ -21,6 +21,15 @@ and driven only through its documented, public embed/export postMessage protocol
 A copy of the Apache License, Version 2.0 also applies to any portions of drawio's source
 reproduced here; see http://www.apache.org/licenses/LICENSE-2.0 for the full terms.
 
+## Three.js
+
+The web UI's "3D View" loads [Three.js](https://threejs.org) (including its `OrbitControls` addon)
+directly from the unpkg CDN at runtime, only when that feature is used. It is not vendored or
+redistributed in this repository.
+
+- Repository: https://github.com/mrdoob/three.js
+- License: MIT
+
 ## This project's own code
 
 All other source in this repository (the MCP server, the standalone web UI, the Gemini
