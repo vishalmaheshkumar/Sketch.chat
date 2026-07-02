@@ -141,8 +141,21 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
     padding: 20px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.45);
   }
-  .modal h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .modal h2 { margin: 0; font-size: 15px; font-weight: 600; }
   .modal p.desc { margin: 0 0 14px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .close-btn { padding: 4px; border: 0; background: transparent; }
+  .close-btn:hover { background: var(--hover-bg); }
+  .close-btn svg { width: 16px; height: 16px; }
+  .steps { margin: 0 0 16px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .steps li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.5; }
+  .steps .num {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent); color: white; font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .steps b { color: var(--text); }
+  .steps span.sub { color: var(--muted); }
   .modal textarea {
     width: 100%; height: 220px; resize: vertical;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
@@ -209,6 +222,9 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
         Export PNG
       </button>
       <div class="divider"></div>
+      <button id="helpBtn" class="icon-btn" title="How to use this">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M9.5 9.3a2.5 2.5 0 114.16 1.87c-.6.53-1.16.9-1.16 1.83" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16.7" r="1" fill="currentColor"/></svg>
+      </button>
       <button id="themeToggleBtn" class="icon-btn" title="Toggle light / dark mode">
         <svg class="sun" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8L6 18M18 6l1.8-1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         <svg class="moon" viewBox="0 0 24 24" fill="none"><path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
@@ -222,12 +238,38 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
 
   <div class="overlay" id="pasteOverlay">
     <div class="modal">
-      <h2>Paste diagram XML</h2>
+      <div class="modal-header">
+        <h2>Paste diagram XML</h2>
+        <button id="closePasteBtn" class="close-btn" title="Close">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
       <p class="desc">Paste the raw mxGraph XML another LLM gave you (starting with &lt;mxfile&gt;). It'll load straight onto the canvas, fully editable.</p>
       <textarea id="pasteArea" placeholder="&lt;mxfile&gt;...&lt;/mxfile&gt;"></textarea>
       <div class="modal-actions">
         <button id="cancelPasteBtn">Cancel</button>
         <button id="loadPastedBtn" class="primary">Load into canvas</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="helpOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>How to use this?</h2>
+        <button id="closeHelpBtn" class="close-btn" title="Close">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <p class="desc">AI Diagram is a bridge between the real drawio editor and whatever LLM chat you already use - it doesn't call any AI itself.</p>
+      <ol class="steps">
+        <li><span class="num">1</span><span><b>Copy Guideline</b> and paste it into ChatGPT, Claude, Gemini, etc., along with your diagram idea.</span></li>
+        <li><span class="num">2</span><span><b>Paste XML</b> with the raw XML that chat gives you back - it loads straight onto the canvas, fully editable.</span></li>
+        <li><span class="num">3</span><span><b>Copy XML</b> any time to hand the current diagram back to that chat for a change, then <b>Paste XML</b> again to load the update.</span></li>
+        <li><span class="num">4</span><span><b>Export PNG</b> when you're happy with it. <span class="sub">The sun/moon icon switches light/dark mode.</span></span></li>
+      </ol>
+      <div class="modal-actions">
+        <button id="gotItBtn" class="primary">Got it</button>
       </div>
     </div>
   </div>
@@ -246,6 +288,11 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
     const cancelPasteBtn = document.getElementById('cancelPasteBtn');
     const toastsEl = document.getElementById('toasts');
     const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const helpBtn = document.getElementById('helpBtn');
+    const helpOverlay = document.getElementById('helpOverlay');
+    const closeHelpBtn = document.getElementById('closeHelpBtn');
+    const gotItBtn = document.getElementById('gotItBtn');
+    const closePasteBtn = document.getElementById('closePasteBtn');
 
     // The toggle flips *both* our own chrome (modal/toasts, via data-theme)
     // and the real drawio editor's own dark mode (canvas/panels), which can
@@ -420,8 +467,32 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
 
     pasteXmlBtn.addEventListener('click', openPasteModal);
     cancelPasteBtn.addEventListener('click', closePasteModal);
+    closePasteBtn.addEventListener('click', closePasteModal);
     pasteOverlay.addEventListener('click', (e) => { if (e.target === pasteOverlay) closePasteModal(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePasteModal(); });
+
+    function openHelp() {
+      helpOverlay.classList.add('open');
+    }
+    function closeHelp() {
+      helpOverlay.classList.remove('open');
+    }
+
+    helpBtn.addEventListener('click', openHelp);
+    closeHelpBtn.addEventListener('click', closeHelp);
+    gotItBtn.addEventListener('click', closeHelp);
+    helpOverlay.addEventListener('click', (e) => { if (e.target === helpOverlay) closeHelp(); });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      closePasteModal();
+      closeHelp();
+    });
+
+    // Show the help overlay automatically the first time someone visits.
+    if (!localStorage.getItem('ai-diagram-help-seen')) {
+      localStorage.setItem('ai-diagram-help-seen', '1');
+      openHelp();
+    }
 
     loadPastedBtn.addEventListener('click', async () => {
       const xml = pasteArea.value.trim();
