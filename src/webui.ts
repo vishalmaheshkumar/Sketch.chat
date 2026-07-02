@@ -12,14 +12,6 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Diagram</title>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-  }
-}
-</script>
 <script>
   // Set the theme before first paint to avoid a flash of the wrong theme.
   (function () {
@@ -134,15 +126,6 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
   #frameWrap { position: absolute; top: 57px; left: 0; right: 0; bottom: 0; background: var(--bg); }
   iframe { width: 100%; height: 100%; border: 0; display: block; }
 
-  #view3d { position: absolute; top: 57px; left: 0; right: 0; bottom: 0; background: #0f1115; display: none; }
-  #view3d.open { display: block; }
-  #view3dCanvas { width: 100%; height: 100%; }
-  #view3dBar {
-    position: absolute; top: 14px; left: 14px; z-index: 5;
-    display: flex; align-items: center; gap: 10px;
-  }
-  #view3dBar span { font-size: 12px; color: #8b91a3; }
-
   /* Modal */
   .overlay {
     position: fixed; inset: 0; background: var(--overlay-bg);
@@ -238,10 +221,6 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
         <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         Export PNG
       </button>
-      <button id="view3dBtn" title="View the current diagram in 3D">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 3v18M4 7.5l8 4.5 8-4.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
-        3D View
-      </button>
       <div class="divider"></div>
       <button id="helpBtn" class="icon-btn" title="How to use this">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M9.5 9.3a2.5 2.5 0 114.16 1.87c-.6.53-1.16.9-1.16 1.83" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="16.7" r="1" fill="currentColor"/></svg>
@@ -255,14 +234,6 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
 
   <div id="frameWrap">
     <iframe id="drawioFrame"></iframe>
-  </div>
-
-  <div id="view3d">
-    <div id="view3dBar">
-      <button id="backTo2dBtn">Back to editor</button>
-      <span>Drag to orbit, scroll to zoom</span>
-    </div>
-    <div id="view3dCanvas"></div>
   </div>
 
   <div class="overlay" id="pasteOverlay">
@@ -290,7 +261,7 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
           <svg viewBox="0 0 24 24" fill="none"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
       </div>
-      <p class="desc">AI Diagram is a bridge between the real drawio editor and whatever LLM chat you already use - it doesn't call any AI itself.</p>
+      <p class="desc">AI Diagram is a bridge between this diagram editor and whatever LLM chat you already use - it doesn't call any AI itself.</p>
       <ol class="steps">
         <li><span class="num">1</span><span><b>Copy Guideline</b> and paste it into ChatGPT, Claude, Gemini, etc., along with your diagram idea.</span></li>
         <li><span class="num">2</span><span><b>Paste XML</b> with the raw XML that chat gives you back - it loads straight onto the canvas, fully editable.</span></li>
@@ -312,10 +283,6 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
     const copyGuidelineBtn = document.getElementById('copyGuidelineBtn');
     const pasteXmlBtn = document.getElementById('pasteXmlBtn');
     const exportBtn = document.getElementById('exportBtn');
-    const view3dBtn = document.getElementById('view3dBtn');
-    const view3d = document.getElementById('view3d');
-    const view3dCanvas = document.getElementById('view3dCanvas');
-    const backTo2dBtn = document.getElementById('backTo2dBtn');
     const pasteOverlay = document.getElementById('pasteOverlay');
     const pasteArea = document.getElementById('pasteArea');
     const loadPastedBtn = document.getElementById('loadPastedBtn');
@@ -397,7 +364,7 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
         return;
       }
       if (msg.event === 'dialog') {
-        toast('drawio: ' + (msg.message || 'error'), 'error');
+        toast('Editor error: ' + (msg.message || 'error'), 'error');
         return;
       }
       const resolve = pending.get(msg.event);
@@ -558,161 +525,6 @@ export function renderWebuiHtml({ editorPath }: WebuiOptions): string {
       } finally {
         withSpinner(exportBtn, false);
       }
-    });
-
-    // --- 3D View -----------------------------------------------------
-    // Purely a visualization layer on top of the same mxGraph XML - it
-    // doesn't introduce a new diagram format, so Copy/Paste XML and any
-    // LLM chat's output are unaffected. Three.js is loaded lazily (only
-    // once "3D View" is clicked) from a CDN, so it costs nothing otherwise.
-
-    function parseDiagramForThree(xmlText) {
-      const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
-      const nodes = [];
-      const edges = [];
-      for (const cell of doc.querySelectorAll('mxCell')) {
-        if (cell.getAttribute('vertex') === '1') {
-          const geo = cell.querySelector('mxGeometry');
-          if (!geo) continue;
-          const style = cell.getAttribute('style') || '';
-          const fillMatch = style.match(/fillColor=(#[0-9a-fA-F]{6})/);
-          nodes.push({
-            id: cell.getAttribute('id'),
-            label: cell.getAttribute('value') || '',
-            x: parseFloat(geo.getAttribute('x') || '0'),
-            y: parseFloat(geo.getAttribute('y') || '0'),
-            w: parseFloat(geo.getAttribute('width') || '80'),
-            h: parseFloat(geo.getAttribute('height') || '40'),
-            color: fillMatch ? fillMatch[1] : '#6366f1',
-          });
-        } else if (cell.getAttribute('edge') === '1' && cell.getAttribute('source') && cell.getAttribute('target')) {
-          edges.push({ source: cell.getAttribute('source'), target: cell.getAttribute('target') });
-        }
-      }
-      return { nodes, edges };
-    }
-
-    const THREE_MODULE_SRC = [
-      "import * as THREE from 'three';",
-      "import { OrbitControls } from 'three/addons/controls/OrbitControls.js';",
-      "let scene, camera, renderer, controls, group, initialized = false;",
-      "function ensureInit(container) {",
-      "  if (initialized) return;",
-      "  initialized = true;",
-      "  scene = new THREE.Scene();",
-      "  camera = new THREE.PerspectiveCamera(50, container.clientWidth / Math.max(container.clientHeight, 1), 0.1, 10000);",
-      "  renderer = new THREE.WebGLRenderer({ antialias: true });",
-      "  renderer.setPixelRatio(window.devicePixelRatio);",
-      "  renderer.setSize(container.clientWidth, container.clientHeight);",
-      "  container.appendChild(renderer.domElement);",
-      "  controls = new OrbitControls(camera, renderer.domElement);",
-      "  controls.enableDamping = true;",
-      "  scene.add(new THREE.AmbientLight(0xffffff, 0.7));",
-      "  const dir = new THREE.DirectionalLight(0xffffff, 0.8);",
-      "  dir.position.set(300, 500, 300);",
-      "  scene.add(dir);",
-      "  window.addEventListener('resize', () => {",
-      "    if (!container.clientWidth || !container.clientHeight) return;",
-      "    camera.aspect = container.clientWidth / container.clientHeight;",
-      "    camera.updateProjectionMatrix();",
-      "    renderer.setSize(container.clientWidth, container.clientHeight);",
-      "  });",
-      "  (function animate() {",
-      "    requestAnimationFrame(animate);",
-      "    controls.update();",
-      "    renderer.render(scene, camera);",
-      "  })();",
-      "}",
-      "function makeLabel(text) {",
-      "  const canvas = document.createElement('canvas');",
-      "  canvas.width = 256; canvas.height = 64;",
-      "  const ctx = canvas.getContext('2d');",
-      "  ctx.fillStyle = '#ffffff';",
-      "  ctx.font = 'bold 26px sans-serif';",
-      "  ctx.textAlign = 'center';",
-      "  ctx.fillText((text || '').slice(0, 22), 128, 40);",
-      "  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthTest: false }));",
-      "  sprite.scale.set(90, 22, 1);",
-      "  return sprite;",
-      "}",
-      "function render(nodes, edges) {",
-      "  if (group) scene.remove(group);",
-      "  group = new THREE.Group();",
-      "  scene.add(group);",
-      "  if (nodes.length === 0) return;",
-      "  const cx = nodes.reduce((s, n) => s + n.x + n.w / 2, 0) / nodes.length;",
-      "  const cy = nodes.reduce((s, n) => s + n.y + n.h / 2, 0) / nodes.length;",
-      "  const depth = 30;",
-      "  const positions = {};",
-      "  for (const n of nodes) {",
-      "    const px = n.x + n.w / 2 - cx;",
-      "    const pz = n.y + n.h / 2 - cy;",
-      "    const mesh = new THREE.Mesh(new THREE.BoxGeometry(n.w, depth, n.h), new THREE.MeshStandardMaterial({ color: n.color }));",
-      "    mesh.position.set(px, depth / 2, pz);",
-      "    group.add(mesh);",
-      "    positions[n.id] = mesh.position;",
-      "    const label = makeLabel(n.label);",
-      "    label.position.set(px, depth + 22, pz);",
-      "    group.add(label);",
-      "  }",
-      "  for (const e of edges) {",
-      "    const a = positions[e.source], b = positions[e.target];",
-      "    if (!a || !b) continue;",
-      "    const geo = new THREE.BufferGeometry().setFromPoints([a.clone(), b.clone()]);",
-      "    group.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0x8b91a3 })));",
-      "  }",
-      "  let maxSpan = 200;",
-      "  for (const n of nodes) {",
-      "    maxSpan = Math.max(maxSpan, Math.abs(n.x + n.w / 2 - cx) + n.w / 2, Math.abs(n.y + n.h / 2 - cy) + n.h / 2);",
-      "  }",
-      "  camera.position.set(0, maxSpan * 1.3, maxSpan * 2.1);",
-      "  controls.target.set(0, 0, 0);",
-      "  camera.lookAt(0, 0, 0);",
-      "  controls.update();",
-      "}",
-      "window.__aiDiagram3D = { ensureInit, render };",
-      "window.dispatchEvent(new Event('ai-diagram-3d-ready'));",
-    ].join('\\n');
-
-    let three3DPromise = null;
-    function load3D() {
-      if (!three3DPromise) {
-        three3DPromise = new Promise((resolve, reject) => {
-          window.addEventListener('ai-diagram-3d-ready', () => resolve(window.__aiDiagram3D), { once: true });
-          const s = document.createElement('script');
-          s.type = 'module';
-          s.textContent = THREE_MODULE_SRC;
-          s.onerror = () => reject(new Error('Failed to load 3D view (are you offline?)'));
-          document.head.appendChild(s);
-        });
-      }
-      return three3DPromise;
-    }
-
-    view3dBtn.addEventListener('click', async () => {
-      withSpinner(view3dBtn, true);
-      try {
-        const xml = await getCurrentXml();
-        const { nodes, edges } = parseDiagramForThree(xml);
-        if (nodes.length === 0) {
-          toast('Nothing to show in 3D yet - add some shapes first.', 'error');
-          return;
-        }
-        const api = await load3D();
-        frameWrap.style.display = 'none';
-        view3d.classList.add('open');
-        api.ensureInit(view3dCanvas);
-        api.render(nodes, edges);
-      } catch (err) {
-        toast('Error: ' + err.message, 'error');
-      } finally {
-        withSpinner(view3dBtn, false);
-      }
-    });
-
-    backTo2dBtn.addEventListener('click', () => {
-      view3d.classList.remove('open');
-      frameWrap.style.display = 'block';
     });
 
     frame.src = editorSrc(isDark);
