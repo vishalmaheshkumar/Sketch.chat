@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ai-diagram": {
+      "command": "node",
+      "args": ["dist/index.js"]
+    }
+  }
+}
