@@ -1,5 +1,11 @@
 # AI Diagram
 
+> [!TIP]
+> **🚀 Try it live: [vishalmaheshkumar.github.io/Sketch.chat](https://vishalmaheshkumar.github.io/Sketch.chat/)**
+>
+> The web UI runs entirely in your browser on GitHub Pages — no install, no API key. Paste your
+> LLM's XML reply onto a real drawio canvas, edit it, and export to PNG.
+
 An independent MCP (Model Context Protocol) server and web UI for AI-driven diagramming, built on
 top of the real, open-source [drawio](https://github.com/jgraph/drawio) editor (Apache License 2.0)
 and [Google Gemini](https://ai.google.dev/). **AI Diagram is not affiliated with, endorsed by, or
